@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1061849149062",
+    "firebase_url": "https://chat-app-296209.firebaseio.com",
+    "project_id": "chat-app-296209",
+    "storage_bucket": "chat-app-296209.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1061849149062:android:2e5ac642766c677ef5ab07",
+        "android_client_info": {
+          "package_name": "com.sunish.quick_bocks"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1061849149062-12sdohrou7ohcsrl7m1gbikmk64br8b0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7Iczi7facim8dnVh55bET1O32O8qzHlk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1061849149062-12sdohrou7ohcsrl7m1gbikmk64br8b0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
