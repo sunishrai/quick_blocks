@@ -114,7 +114,7 @@ class _VideoCallState extends State<VideoCall> {
 
   Future<void> call(currentUserId,receiver_id) async {
     List<int> opponentIds = [currentUserId, receiver_id];
-    int sessionType = QBRTCSessionTypes.VIDEO;
+    int sessionType = QBRTCSessionTypes.AUDIO;
 
     try {
       QBRTCSession session = await QB.webrtc.call(opponentIds, sessionType);

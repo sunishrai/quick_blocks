@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:quick_bocks/Chat.dart';
@@ -5,7 +6,9 @@ import 'package:quick_bocks/Signup.dart';
 import 'package:quick_bocks/UserList.dart';
 import 'package:quickblox_sdk/auth/module.dart';
 import 'package:quickblox_sdk/models/qb_session.dart';
+import 'package:quickblox_sdk/models/qb_subscription.dart';
 import 'package:quickblox_sdk/models/qb_user.dart';
+import 'package:quickblox_sdk/push/constants.dart';
 import 'package:quickblox_sdk/quickblox_sdk.dart';
 import 'package:quick_bocks/Constants.dart';
 import 'package:toast/toast.dart';
@@ -50,7 +53,7 @@ void login(name,password,context) async {
     QBLoginResult result = await QB.auth.login(name, password);
     QBUser qbUser = result.qbUser;
     QBSession qbSession = result.qbSession;
-    print(qbUser.toString());
+    print('User ${qbUser.toString()}');
     print(qbSession.toString());
     // Navigator.push(context, MaterialPageRoute(builder: (context)=>Chat()));
     Navigator.push(context, MaterialPageRoute(builder: (context)=>UsetList(currentUserId:qbUser.id,qbSession:qbSession.token)));
@@ -59,6 +62,17 @@ void login(name,password,context) async {
   }
 }
 
+// void subscribePush(){
+//   try {
+//     List<QBSubscription> subscriptions = await QB.subscriptions.create(
+//         deviceToken,
+//         pushChannel
+//     );
+//   } on PlatformException catch (e) {
+//     // Some error occured, look at the exception message for more details
+//   }
+// }
+
 
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -66,9 +80,12 @@ class _MyHomePageState extends State<MyHomePage> {
   final _formKey = GlobalKey<FormState>();
   TextEditingController emailTextController = TextEditingController();
   TextEditingController passwordTextController = TextEditingController();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
+
   @override
   void initState() {
     init();
+    initFirebase();
   }
 
   @override
@@ -162,6 +179,46 @@ class _MyHomePageState extends State<MyHomePage> {
         )
       ),
     );
+  }
+
+  void initFirebase() {
+    _firebaseMessaging.configure(
+      onMessage: (Map<String, dynamic> message) async {
+        print("onMessage: $message");
+        // fcmMessageHandler(message, navigatorKey, context);
+      },
+      onLaunch: (Map<String, dynamic> message) async {
+        print("onLaunch: $message");
+        // fcmMessageHandler(message, navigatorKey, context);
+      },
+      onResume: (Map<String, dynamic> message) async {
+        print("onResume: $message");
+        // fcmMessageHandler(message, navigatorKey, context);
+      },
+    );
+
+    //Needed by iOS only
+    _firebaseMessaging.requestNotificationPermissions(
+        const IosNotificationSettings(sound: true, badge: true, alert: true));
+    _firebaseMessaging.onIosSettingsRegistered
+        .listen((IosNotificationSettings settings) {
+      print("Settings registered: $settings");
+    });
+
+    //Getting the token from FCM
+    _firebaseMessaging.getToken().then((String token) async {
+      assert(token != null);
+
+      try {
+        List<QBSubscription> subscriptions = await QB.subscriptions.create(
+            token,
+            QBPushChannelNames.GCM
+        );
+      } on PlatformException catch (e) {
+      // Some error occured, look at the exception message for more details
+      }
+      print("Firebase Token:  $token");
+    });
   }
 
 }
