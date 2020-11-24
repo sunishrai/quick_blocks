@@ -52,7 +52,7 @@ void init() async {
   }
 }
 
-void login(name,password,context) async {
+void login(name,password,context,push_token) async {
   try {
     QBLoginResult result = await QB.auth.login(name, password);
     QBUser qbUser = result.qbUser;
@@ -61,10 +61,31 @@ void login(name,password,context) async {
     print(qbSession.toString());
     // Navigator.push(context, MaterialPageRoute(builder: (context)=>Chat()));
     // Navigator.push(context, MaterialPageRoute(builder: (context)=>ChatList(currentUserId:qbUser.id,qbSession:qbSession.token)));
+    await subscribePush(push_token);
     Navigator.push(context, MaterialPageRoute(builder: (context)=>UsetList(currentUserId:qbUser.id,qbSession:qbSession.token)));
   } on PlatformException catch (e) {
     Toast.show("Invalid user name or password ", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.CENTER);
   }
+}
+
+
+Future<void> subscribePush(String token) async {
+  try {
+    List<QBSubscription> subscriptions = await QB.subscriptions.create(
+        token,
+        QBPushChannelNames.GCM
+    );
+    subscriptions.forEach((element) {
+      print('subscriptions');
+    });
+    print('subscriptions');
+    // _notificationPlugin.showNotification();
+  } on PlatformException catch (e) {
+    print(e.message);
+    print('subscriptionserror');
+    // Some error occured, look at the exception message for more details
+  }
+  return;
 }
 
 Future<dynamic> myBackgroundMessageHandler(Map<String, dynamic> message) {
@@ -89,6 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController emailTextController = TextEditingController();
   TextEditingController passwordTextController = TextEditingController();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
+  String push_token;
 
   @override
   void initState() {
@@ -178,7 +200,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     onPressed: () {
                       if (_formKey.currentState.validate()) {
-                        login(emailTextController.text,passwordTextController.text,context);
+                        login(emailTextController.text,passwordTextController.text,context,push_token);
                       }
 
                     }),
@@ -225,29 +247,11 @@ class _MyHomePageState extends State<MyHomePage> {
     _firebaseMessaging.getToken().then((String token) {
       // assert(token != null);
       print("Firebase Token:  $token");
-      subscribePush(token);
+      push_token = token;
     });
   }
 
 
-  Future<void> subscribePush(String token) async {
-    showNotificationWithSound("");
-    try {
-      List<QBSubscription> subscriptions = await QB.subscriptions.create(
-          token,
-          "FCM"
-      );
-      subscriptions.forEach((element) {
-        print('subscriptions');
-      });
-      print('subscriptions');
-
-      // _notificationPlugin.showNotification();
-    } on PlatformException catch (e) {
-      print(e.message);
-      // Some error occured, look at the exception message for more details
-    }
-  }
 
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
