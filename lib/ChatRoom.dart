@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:quick_bocks/VideoCall.dart';
 import 'package:quickblox_sdk/chat/constants.dart';
 import 'package:quickblox_sdk/models/qb_attachment.dart';
+import 'package:quickblox_sdk/models/qb_event.dart';
 import 'package:quickblox_sdk/models/qb_file.dart';
 import 'package:quickblox_sdk/models/qb_message.dart';
+import 'package:quickblox_sdk/notifications/constants.dart';
 import 'package:quickblox_sdk/quickblox_sdk.dart';
 import 'package:toast/toast.dart';
 import 'dart:io';
@@ -51,7 +53,7 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver{
       // Some error occured, look at the exception message for more details
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +65,7 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver{
       body: Column(
         children: [
           ChatListWidget(messages: messages,currentUserId:widget.currentUserId),//Chat list
-          InputWidget(widget.d_id)
+          InputWidget(widget.d_id,widget.currentUserId)
         ],
       ),
     );
@@ -76,6 +78,35 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver{
     enableAutoReconnect();
     enableCarbons();
     subscribeNewMessage();
+    pingUser(widget.currentUserId);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+
+  @override
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        try {
+          await QB.chat.connect(widget.currentUserId, '12345678');
+        } on PlatformException catch (e) {
+          // Some error occured, look at the exception message for more details
+        }
+        break;
+      case AppLifecycleState.paused:
+        print("app in paused");
+        try {
+          await QB.chat.disconnect();
+        } on PlatformException catch (e) {
+          // Some error occured, look at the exception message for more details
+        }
+        break;
+    }
   }
 
 
@@ -103,6 +134,20 @@ class _ChatRoomState extends State<ChatRoom> with WidgetsBindingObserver{
   void enableCarbons() async {
     try {
       await QB.settings.enableCarbons();
+    } on PlatformException catch (e) {
+      // Some error occured, look at the exception message for more details
+    }
+  }
+
+  Future<void> pingUser(userId) async {
+    try {
+      await QB.chat.pingUser(userId);
+    } on PlatformException catch (e) {
+      // Some error occured, look at the exception message for more details
+    }
+
+    try {
+      await QB.chat.pingServer();
     } on PlatformException catch (e) {
       // Some error occured, look at the exception message for more details
     }
@@ -222,7 +267,8 @@ class ChatListWidget extends StatelessWidget{
 class InputWidget extends StatefulWidget {
 
   String dialog_id;
-  InputWidget(this.dialog_id);
+  int currentUserId;
+  InputWidget(this.dialog_id,this.currentUserId);
 
   @override
   _InputWidgetState createState() => _InputWidgetState();
@@ -240,7 +286,7 @@ class _InputWidgetState extends State<InputWidget> {
     setState(() {
       if (pickedFile != null) {
         _image = File(pickedFile.path);
-        sendMessage(widget.dialog_id,"");
+        sendMessage(widget.dialog_id,"",widget.currentUserId);
         print(_image);
       } else {
         print('No image selected.');
@@ -283,24 +329,24 @@ class _InputWidgetState extends State<InputWidget> {
           ),
 
           // Send Message Button
-             new Container(
-              margin: new EdgeInsets.symmetric(horizontal: 8.0),
-              child: new IconButton(
-                icon: new Icon(Icons.send),
-                onPressed: ()  {
-                  if(textEditingController.text.isEmpty){
-                    Toast.show("Enter Message", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.BOTTOM);
-                  }else{
-                    sendMessage(widget.dialog_id,textEditingController.text);
-                    setState(() {
-                      textEditingController.clear();
-                    });
-                  }
+          new Container(
+            margin: new EdgeInsets.symmetric(horizontal: 8.0),
+            child: new IconButton(
+              icon: new Icon(Icons.send),
+              onPressed: ()  {
+                if(textEditingController.text.isEmpty){
+                  Toast.show("Enter Message", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.BOTTOM);
+                }else{
+                  sendMessage(widget.dialog_id,textEditingController.text,widget.currentUserId);
+                  setState(() {
+                    textEditingController.clear();
+                  });
+                }
 
-                },
-                color: Colors.blue,
-              ),
+              },
+              color: Colors.blue,
             ),
+          ),
 
         ],
       ),
@@ -313,18 +359,19 @@ class _InputWidgetState extends State<InputWidget> {
     );
 
 
+
   }
 
 
 
-  void sendMessage(String dialog_id,String message) async {
+  void sendMessage(String dialog_id,String message,int currentUserId) async {
 
     if(message.isEmpty){
       QBAttachment attachment = new QBAttachment();
       print("else if");
       try {
         // var uri = Uri.parse(_image.path);
-         var uri = Uri.file(_image.path);
+        var uri = Uri.file(_image.path);
         print('fileName $uri');
         print('fileName ${_image.path}');
         QBFile file = await QB.content.upload(uri.toString(), public: false);
@@ -378,6 +425,26 @@ class _InputWidgetState extends State<InputWidget> {
       } on PlatformException catch (e) {
         // Some error occured, look at the exception message for more details
       }
+    }
+
+    sendPushNotification(currentUserId,message,'You have new message');
+  }
+
+  Future<void> sendPushNotification(currentUserId, String message,String body) async {
+    try {
+      String type=QBNotificationEventTypes.ONE_SHOT;
+      String notificationEventType= QBNotificationTypes.PUSH;
+      Map<String,String> payload ={'message': message,'body':body};
+
+      List<QBEvent> qbEvent = await QB.events.create(
+          type,
+          notificationEventType,
+          currentUserId,
+          payload);
+      print('sent11111111111');
+    } on PlatformException catch (e) {
+      print(e.message);
+      // Some error occured, look at the exception message for more details
     }
   }
 

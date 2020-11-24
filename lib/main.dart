@@ -1,9 +1,14 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:quick_bocks/Chat.dart';
+import 'package:quick_bocks/ChatRoom.dart';
+import 'package:quick_bocks/MyChatList.dart';
 import 'package:quick_bocks/Signup.dart';
 import 'package:quick_bocks/UserList.dart';
+import 'package:quick_bocks/notification_plugin.dart';
 import 'package:quickblox_sdk/auth/module.dart';
 import 'package:quickblox_sdk/models/qb_session.dart';
 import 'package:quickblox_sdk/models/qb_subscription.dart';
@@ -20,7 +25,7 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -37,7 +42,6 @@ class MyHomePage extends StatefulWidget {
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
-
 
 void init() async {
   try {
@@ -56,23 +60,27 @@ void login(name,password,context) async {
     print('User ${qbUser.toString()}');
     print(qbSession.toString());
     // Navigator.push(context, MaterialPageRoute(builder: (context)=>Chat()));
+    // Navigator.push(context, MaterialPageRoute(builder: (context)=>ChatList(currentUserId:qbUser.id,qbSession:qbSession.token)));
     Navigator.push(context, MaterialPageRoute(builder: (context)=>UsetList(currentUserId:qbUser.id,qbSession:qbSession.token)));
   } on PlatformException catch (e) {
     Toast.show("Invalid user name or password ", context, duration: Toast.LENGTH_SHORT, gravity:  Toast.CENTER);
   }
 }
 
-// void subscribePush(){
-//   try {
-//     List<QBSubscription> subscriptions = await QB.subscriptions.create(
-//         deviceToken,
-//         pushChannel
-//     );
-//   } on PlatformException catch (e) {
-//     // Some error occured, look at the exception message for more details
-//   }
-// }
+Future<dynamic> myBackgroundMessageHandler(Map<String, dynamic> message) {
+  if (message.containsKey('data')) {
+    // Handle data message
+    final dynamic data = message['data'];
 
+    print("Firebase Background");
+  }
+
+  if (message.containsKey('notification')) {
+    // Handle notification message
+    final dynamic notification = message['notification'];
+  }
+  // Or do other work.
+}
 
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -86,6 +94,8 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     init();
     initFirebase();
+    initNotification();
+    super.initState();
   }
 
   @override
@@ -172,7 +182,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       }
 
                     }),
-                FlatButton(onPressed: (){Navigator.push(context, MaterialPageRoute(builder: (context)=>SignUp()));}, child: Text("Register")),
+                FlatButton(onPressed: (){
+                  Navigator.push(context, MaterialPageRoute(builder: (context)=>SignUp()));
+                  }, child: Text("Register")),
               ],
             ),
           ),
@@ -185,16 +197,20 @@ class _MyHomePageState extends State<MyHomePage> {
     _firebaseMessaging.configure(
       onMessage: (Map<String, dynamic> message) async {
         print("onMessage: $message");
+        showNotificationWithSound('onMessage');
         // fcmMessageHandler(message, navigatorKey, context);
       },
       onLaunch: (Map<String, dynamic> message) async {
         print("onLaunch: $message");
+        showNotificationWithSound('onLaunch');
         // fcmMessageHandler(message, navigatorKey, context);
       },
       onResume: (Map<String, dynamic> message) async {
         print("onResume: $message");
+        showNotificationWithSound('onResume');
         // fcmMessageHandler(message, navigatorKey, context);
       },
+      onBackgroundMessage: myBackgroundMessageHandler
     );
 
     //Needed by iOS only
@@ -206,19 +222,70 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     //Getting the token from FCM
-    _firebaseMessaging.getToken().then((String token) async {
-      assert(token != null);
-
-      try {
-        List<QBSubscription> subscriptions = await QB.subscriptions.create(
-            token,
-            QBPushChannelNames.GCM
-        );
-      } on PlatformException catch (e) {
-      // Some error occured, look at the exception message for more details
-      }
+    _firebaseMessaging.getToken().then((String token) {
+      // assert(token != null);
       print("Firebase Token:  $token");
+      subscribePush(token);
     });
   }
+
+
+  Future<void> subscribePush(String token) async {
+    showNotificationWithSound("");
+    try {
+      List<QBSubscription> subscriptions = await QB.subscriptions.create(
+          token,
+          "FCM"
+      );
+      subscriptions.forEach((element) {
+        print('subscriptions');
+      });
+      print('subscriptions');
+
+      // _notificationPlugin.showNotification();
+    } on PlatformException catch (e) {
+      print(e.message);
+      // Some error occured, look at the exception message for more details
+    }
+  }
+
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+
+  void initNotification() {
+    var initializationSettingsAndroid =
+    new AndroidInitializationSettings('launch_background');
+    var initializationSettingsIOS = new IOSInitializationSettings();
+    var initializationSettings = new InitializationSettings(
+        initializationSettingsAndroid, initializationSettingsIOS);
+
+    flutterLocalNotificationsPlugin = new FlutterLocalNotificationsPlugin();
+    flutterLocalNotificationsPlugin.initialize(initializationSettings,
+        onSelectNotification: (payload) {
+          return onSelectNotification(payload);
+        });
+  }
+
+  Future showNotificationWithSound(message) async {
+    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
+        'your channel id', 'your channel name', 'your channel description',
+        importance: Importance.Max, priority: Priority.High);
+
+    var iOSPlatformChannelSpecifics =
+    new IOSNotificationDetails(sound: "slow_spring_board.aiff");
+    var platformChannelSpecifics = new NotificationDetails(
+        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'New Follower',
+      'Hi chat',
+      platformChannelSpecifics,
+      payload: 'Custom_Sound',
+    );
+  }
+
+  Future onSelectNotification(String payload) async {
+    print("Play is ${payload}");
+  }
+
 
 }
