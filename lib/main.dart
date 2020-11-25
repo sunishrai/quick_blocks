@@ -93,7 +93,12 @@ Future<dynamic> myBackgroundMessageHandler(Map<String, dynamic> message) {
     // Handle data message
     final dynamic data = message['data'];
 
+    String body = data['body'];
+    String message1 = data['message'];
+
     print("Firebase Background");
+
+    showNotificationWithSound(body,message1);
   }
 
   if (message.containsKey('notification')) {
@@ -101,6 +106,48 @@ Future<dynamic> myBackgroundMessageHandler(Map<String, dynamic> message) {
     final dynamic notification = message['notification'];
   }
   // Or do other work.
+}
+
+
+FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
+
+void initNotification() {
+  var initializationSettingsAndroid =
+  new AndroidInitializationSettings('launch_background');
+  var initializationSettingsIOS = new IOSInitializationSettings();
+  var initializationSettings = new InitializationSettings(
+      initializationSettingsAndroid, initializationSettingsIOS);
+
+  flutterLocalNotificationsPlugin = new FlutterLocalNotificationsPlugin();
+  flutterLocalNotificationsPlugin.initialize(initializationSettings,
+      onSelectNotification: (payload) {
+        return onSelectNotification(payload);
+      });
+}
+
+Future showNotificationWithSound(body,message) async {
+  if(flutterLocalNotificationsPlugin==null){
+    initNotification();
+  }
+  var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
+      'your channel id', 'your channel name', 'your channel description',
+      importance: Importance.Max, priority: Priority.High);
+
+  var iOSPlatformChannelSpecifics =
+  new IOSNotificationDetails(sound: "slow_spring_board.aiff");
+  var platformChannelSpecifics = new NotificationDetails(
+      androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
+  await flutterLocalNotificationsPlugin.show(
+    0,
+    body,
+    message,
+    platformChannelSpecifics,
+    payload: 'Custom_Sound',
+  );
+}
+
+Future onSelectNotification(String payload) async {
+  print("Play is ${payload}");
 }
 
 
@@ -219,17 +266,23 @@ class _MyHomePageState extends State<MyHomePage> {
     _firebaseMessaging.configure(
       onMessage: (Map<String, dynamic> message) async {
         print("onMessage: $message");
-        showNotificationWithSound('onMessage');
+
+        final dynamic data = message['data'];
+        String body = data['body'];
+        String message1 = data['message'];
+        showNotificationWithSound(body,message1);
+
+        // showNotificationWithSound('onMessage');
         // fcmMessageHandler(message, navigatorKey, context);
       },
       onLaunch: (Map<String, dynamic> message) async {
         print("onLaunch: $message");
-        showNotificationWithSound('onLaunch');
+        // showNotificationWithSound('onLaunch');
         // fcmMessageHandler(message, navigatorKey, context);
       },
       onResume: (Map<String, dynamic> message) async {
         print("onResume: $message");
-        showNotificationWithSound('onResume');
+        // showNotificationWithSound('onResume');
         // fcmMessageHandler(message, navigatorKey, context);
       },
       onBackgroundMessage: myBackgroundMessageHandler
@@ -249,46 +302,6 @@ class _MyHomePageState extends State<MyHomePage> {
       print("Firebase Token:  $token");
       push_token = token;
     });
-  }
-
-
-
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
-
-  void initNotification() {
-    var initializationSettingsAndroid =
-    new AndroidInitializationSettings('launch_background');
-    var initializationSettingsIOS = new IOSInitializationSettings();
-    var initializationSettings = new InitializationSettings(
-        initializationSettingsAndroid, initializationSettingsIOS);
-
-    flutterLocalNotificationsPlugin = new FlutterLocalNotificationsPlugin();
-    flutterLocalNotificationsPlugin.initialize(initializationSettings,
-        onSelectNotification: (payload) {
-          return onSelectNotification(payload);
-        });
-  }
-
-  Future showNotificationWithSound(message) async {
-    var androidPlatformChannelSpecifics = new AndroidNotificationDetails(
-        'your channel id', 'your channel name', 'your channel description',
-        importance: Importance.Max, priority: Priority.High);
-
-    var iOSPlatformChannelSpecifics =
-    new IOSNotificationDetails(sound: "slow_spring_board.aiff");
-    var platformChannelSpecifics = new NotificationDetails(
-        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      'New Follower',
-      'Hi chat',
-      platformChannelSpecifics,
-      payload: 'Custom_Sound',
-    );
-  }
-
-  Future onSelectNotification(String payload) async {
-    print("Play is ${payload}");
   }
 
 
