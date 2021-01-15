@@ -26,10 +26,12 @@ class _VideoCallState extends State<VideoCall> {
   String sessionId = "";
   int userId;
   int opponentId;
+  String callSesiionId = "";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(),
       body: Column(
         children: [
           Container(
@@ -41,6 +43,7 @@ class _VideoCallState extends State<VideoCall> {
             ),
             decoration: new BoxDecoration(color: Colors.black54),
           ),
+          SizedBox(height: 10,),
           Container(
             margin: new EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
             width: 160.0,
@@ -49,7 +52,67 @@ class _VideoCallState extends State<VideoCall> {
               onVideoViewCreated: _onRemoteVideoViewCreated,
             ),
             decoration: new BoxDecoration(color: Colors.black54),
-          )
+          ),
+          FlatButton(
+            color: Colors.blue,
+            textColor: Colors.white,
+            disabledColor: Colors.grey,
+            disabledTextColor: Colors.black,
+            padding: EdgeInsets.all(8.0),
+            splashColor: Colors.blueAccent,
+            onPressed: () {
+              call();
+            },
+            child: Text(
+              "Call",
+              style: TextStyle(fontSize: 20.0),
+            ),
+          ),
+          FlatButton(
+            color: Colors.blue,
+            textColor: Colors.white,
+            disabledColor: Colors.grey,
+            disabledTextColor: Colors.black,
+            padding: EdgeInsets.all(8.0),
+            splashColor: Colors.blueAccent,
+            onPressed: () {
+              acceptCall();
+            },
+            child: Text(
+              "Accept",
+              style: TextStyle(fontSize: 20.0),
+            ),
+          ),
+          FlatButton(
+            color: Colors.blue,
+            textColor: Colors.white,
+            disabledColor: Colors.grey,
+            disabledTextColor: Colors.black,
+            padding: EdgeInsets.all(8.0),
+            splashColor: Colors.blueAccent,
+            onPressed: () {
+              rejectCall();
+            },
+            child: Text(
+              "Reject",
+              style: TextStyle(fontSize: 20.0),
+            ),
+          ),
+          FlatButton(
+            color: Colors.blue,
+            textColor: Colors.white,
+            disabledColor: Colors.grey,
+            disabledTextColor: Colors.black,
+            padding: EdgeInsets.all(8.0),
+            splashColor: Colors.blueAccent,
+            onPressed: () {
+              endCall();
+            },
+            child: Text(
+              "End",
+              style: TextStyle(fontSize: 20.0),
+            ),
+          ),
         ],
       ),
     );
@@ -105,6 +168,9 @@ class _VideoCallState extends State<VideoCall> {
         int initiatorId = sessionMap["initiatorId"];
         int callType = sessionMap["type"];
 
+        callSesiionId = sessionId;
+        play();
+
         print('callType  $callType');
       });
     } on PlatformException catch (e) {
@@ -112,8 +178,8 @@ class _VideoCallState extends State<VideoCall> {
     }
   }
 
-  Future<void> call(currentUserId,receiver_id) async {
-    List<int> opponentIds = [currentUserId, receiver_id];
+  Future<void> call() async {
+    List<int> opponentIds = [userId, opponentId];
     int sessionType = QBRTCSessionTypes.AUDIO;
 
     try {
@@ -125,10 +191,9 @@ class _VideoCallState extends State<VideoCall> {
 
   Future<void> acceptCall() async {
     Map<String, Object> userInfo = new Map();
-    String sessionId = "5d4175afa0eb4715cae5b63f";
 
     try {
-      QBRTCSession session = await QB.webrtc.accept(sessionId, userInfo: userInfo);
+      QBRTCSession session = await QB.webrtc.accept(callSesiionId, userInfo: userInfo);
     } on PlatformException catch (e) {
       // Some error occured, look at the exception message for more details
     }
@@ -136,10 +201,9 @@ class _VideoCallState extends State<VideoCall> {
 
   Future<void> rejectCall() async {
     Map<String, Object> userInfo = new Map();
-    String sessionId = "5d4175afa0eb4715cae5b63f";
 
     try {
-      QBRTCSession session = await QB.webrtc.reject(sessionId, userInfo: userInfo);
+      QBRTCSession session = await QB.webrtc.reject(callSesiionId, userInfo: userInfo);
     } on PlatformException catch (e) {
       // Some error occured, look at the exception message for more details
     }
@@ -147,10 +211,9 @@ class _VideoCallState extends State<VideoCall> {
 
   Future<void> endCall() async {
     Map<String, Object> userInfo = new Map();
-    String sessionId = "5d4175afa0eb4715cae5b63f";
 
     try {
-      QBRTCSession session = await QB.webrtc.hangUp(sessionId, userInfo: userInfo);
+      QBRTCSession session = await QB.webrtc.hangUp(callSesiionId, userInfo: userInfo);
     } on PlatformException catch (e) {
       // Some error occured, look at the exception message for more details
     }
