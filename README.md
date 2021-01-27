@@ -1,6 +1,6 @@
-# quick_bocks
+# quick_blocks
 
-A new Flutter application.
+Chat Application in flutter using Quick Blocks Sdk.
 
 ## Getting Started
 
